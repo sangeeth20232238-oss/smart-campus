@@ -30,4 +30,22 @@ public class RoomResource {
         store.getRooms().put(room.getId(), room);
         return Response.status(201).entity(room).build();
     }
+
+    @GET
+    @Path("/{roomId}")
+    public Response getRoom(@PathParam("roomId") String roomId) {
+        Room room = store.getRooms().get(roomId);
+        if (room == null) return Response.status(404).entity("Room not found").build();
+        return Response.ok(room).build();
+    }
+
+    @DELETE
+    @Path("/{roomId}")
+    public Response deleteRoom(@PathParam("roomId") String roomId) {
+        if (!store.getRooms().containsKey(roomId)) {
+            return Response.status(404).entity("Room not found").build();
+        }
+        store.getRooms().remove(roomId);
+        return Response.noContent().build();
+    }
 }
