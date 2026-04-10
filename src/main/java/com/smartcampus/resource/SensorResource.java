@@ -6,8 +6,8 @@ import com.smartcampus.store.DataStore;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Path("/sensors")
 @Produces(MediaType.APPLICATION_JSON)
@@ -17,9 +17,11 @@ public class SensorResource {
     private final DataStore store = DataStore.getInstance();
 
     @GET
-    public Response getSensors() {
-        List<Sensor> sensors = new ArrayList<>(store.getSensors().values());
-        return Response.ok(sensors).build();
+    public Response getSensors(@QueryParam("type") String type) {
+        List<Sensor> result = store.getSensors().values().stream()
+                .filter(s -> type == null || s.getType().equalsIgnoreCase(type))
+                .collect(Collectors.toList());
+        return Response.ok(result).build();
     }
 
     @POST
@@ -37,5 +39,15 @@ public class SensorResource {
         Sensor sensor = store.getSensors().get(sensorId);
         if (sensor == null) return Response.status(404).entity("Sensor not found").build();
         return Response.ok(sensor).build();
+    }
+
+    @DELETE
+    @Path("/{sensorId}")
+    public Response deleteSensor(@PathParam("sensorId") String sensorId) {
+        if (!store.getSensors().containsKey(sensorId)) {
+            return Response.status(404).entity("Sensor not found").build();
+        }
+        store.getSensors().remove(sensorId);
+        return Response.noContent().build();
     }
 }
