@@ -50,4 +50,9 @@ public class SensorResource {
         store.getSensors().remove(sensorId);
         return Response.noContent().build();
     }
+
+    @Path("/{sensorId}/readings")
+    public SensorReadingResource getReadingResource(@PathParam("sensorId") String sensorId) {
+        return new SensorReadingResource(sensorId);
+    }
 }
