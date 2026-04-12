@@ -1,5 +1,6 @@
 package com.smartcampus.resource;
 
+import com.smartcampus.model.Sensor;
 import com.smartcampus.model.SensorReading;
 import com.smartcampus.store.DataStore;
 
@@ -34,6 +35,11 @@ public class SensorReadingResource {
         reading.setId(UUID.randomUUID().toString());
         reading.setTimestamp(System.currentTimeMillis());
         store.addReading(sensorId, reading);
+        // Fix: update parent sensor currentValue for data consistency
+        Sensor sensor = store.getSensors().get(sensorId);
+        if (sensor != null) {
+            sensor.setCurrentValue(reading.getValue());
+        }
         return Response.status(201).entity(reading).build();
     }
 }
