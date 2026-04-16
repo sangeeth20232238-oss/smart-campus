@@ -1,11 +1,18 @@
 package com.smartcampus.resource;
 
+import com.smartcampus.exception.BadRequestException;
+import com.smartcampus.exception.ResourceConflictException;
+import com.smartcampus.exception.ResourceNotFoundException;
+import com.smartcampus.exception.RoomNotEmptyException;
 import com.smartcampus.model.Room;
 import com.smartcampus.store.DataStore;
 
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriInfo;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,27 +30,34 @@ public class RoomResource {
     }
 
     @POST
-    public Response createRoom(Room room) {
-        if (room == null || room.getId() == null) {
-            return Response.status(400).entity("Room id is required").build();
+    public Response createRoom(Room room, @Context UriInfo uriInfo) {
+        if (room == null || room.getId() == null || room.getId().isBlank()) {
+            throw new BadRequestException("Room id is required.");
+        }
+        if (store.getRooms().containsKey(room.getId())) {
+            throw new ResourceConflictException("Room with id '" + room.getId() + "' already exists.");
         }
         store.getRooms().put(room.getId(), room);
-        return Response.status(201).entity(room).build();
+        URI location = uriInfo.getAbsolutePathBuilder().path(room.getId()).build();
+        return Response.created(location).entity(room).build();
     }
 
     @GET
     @Path("/{roomId}")
     public Response getRoom(@PathParam("roomId") String roomId) {
         Room room = store.getRooms().get(roomId);
-        if (room == null) return Response.status(404).entity("Room not found").build();
+        if (room == null) throw new ResourceNotFoundException("Room '" + roomId + "' not found.");
         return Response.ok(room).build();
     }
 
     @DELETE
     @Path("/{roomId}")
     public Response deleteRoom(@PathParam("roomId") String roomId) {
-        if (!store.getRooms().containsKey(roomId)) {
-            return Response.status(404).entity("Room not found").build();
+        Room room = store.getRooms().get(roomId);
+        if (room == null) throw new ResourceNotFoundException("Room '" + roomId + "' not found.");
+        if (!room.getSensorIds().isEmpty()) {
+            throw new RoomNotEmptyException(
+                    "Cannot delete room '" + roomId + "': it still has " + room.getSensorIds().size() + " sensor(s) assigned.");
         }
         store.getRooms().remove(roomId);
         return Response.noContent().build();

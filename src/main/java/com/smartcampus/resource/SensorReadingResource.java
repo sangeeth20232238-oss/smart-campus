@@ -1,5 +1,7 @@
 package com.smartcampus.resource;
 
+import com.smartcampus.exception.BadRequestException;
+import com.smartcampus.exception.SensorUnavailableException;
 import com.smartcampus.model.Sensor;
 import com.smartcampus.model.SensorReading;
 import com.smartcampus.store.DataStore;
@@ -29,17 +31,18 @@ public class SensorReadingResource {
 
     @POST
     public Response addReading(SensorReading reading) {
-        if (reading == null) {
-            return Response.status(400).entity("Reading body required").build();
+        if (reading == null) throw new BadRequestException("Reading body is required.");
+        Sensor sensor = store.getSensors().get(sensorId);
+        if (sensor != null && "MAINTENANCE".equalsIgnoreCase(sensor.getStatus())) {
+            throw new SensorUnavailableException(
+                    "Sensor '" + sensorId + "' is under maintenance. Readings cannot be added.");
         }
         reading.setId(UUID.randomUUID().toString());
         reading.setTimestamp(System.currentTimeMillis());
         store.addReading(sensorId, reading);
-        // Fix: update parent sensor currentValue for data consistency
-        Sensor sensor = store.getSensors().get(sensorId);
         if (sensor != null) {
             sensor.setCurrentValue(reading.getValue());
         }
-        return Response.status(201).entity(reading).build();
+        return Response.status(Response.Status.CREATED).entity(reading).build();
     }
 }
